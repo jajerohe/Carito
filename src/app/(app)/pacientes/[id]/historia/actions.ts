@@ -9,13 +9,23 @@ import { getDb } from "@/db";
 import { historiaClinica, notaAclaratoria } from "@/db/schema";
 import { registrar } from "@/lib/auditoria";
 import type { Estado } from "@/lib/errores";
-import { leerAnamnesis, leerExamen } from "@/lib/historia";
+import {
+  ANEXO_ORTODONCIA,
+  DIAGNOSTICO,
+  PLAN_TRATAMIENTO,
+  leerAnamnesis,
+  leerExamen,
+  leerRespuestas,
+} from "@/lib/historia";
 import { requireSession } from "@/lib/session";
 
 const SECCIONES = {
   motivo: "motivo de consulta",
   anamnesis: "anamnesis",
   examen: "examen estomatológico y estado periodontal",
+  anexo: "anexo de ortodoncia",
+  diagnostico: "diagnóstico y objetivos",
+  plan: "plan de tratamiento",
 } as const;
 
 async function buscar(historiaId: number) {
@@ -56,6 +66,12 @@ export async function guardarSeccion(_estado: Estado, datos: FormData): Promise<
       .where(eq(historiaClinica.id, historia.id));
   } else if (seccion === "examen") {
     await getDb().update(historiaClinica).set({ examen: leerExamen(datos) }).where(eq(historiaClinica.id, historia.id));
+  } else if (seccion === "anexo" || seccion === "diagnostico" || seccion === "plan") {
+    const bloques = { anexo: ANEXO_ORTODONCIA, diagnostico: DIAGNOSTICO, plan: PLAN_TRATAMIENTO }[seccion];
+    await getDb()
+      .update(historiaClinica)
+      .set({ [seccion]: leerRespuestas(datos, bloques) })
+      .where(eq(historiaClinica.id, historia.id));
   } else {
     return { ok: false, mensaje: "Sección desconocida." };
   }

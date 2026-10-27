@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { getDb } from "@/db";
 import { historiaClinica, notaAclaratoria, paciente } from "@/db/schema";
 import { registrarConsulta } from "@/lib/auditoria";
-import type { Anamnesis, Examen } from "@/lib/historia";
+import type { Anamnesis, Examen, Respuestas } from "@/lib/historia";
 import { requireSession } from "@/lib/session";
 import { HistoriaClinica } from "./historia";
 
@@ -37,6 +37,9 @@ export default async function HistoriaPage({ params }: PageProps<"/pacientes/[id
           motivoConsulta: historia.motivoConsulta ?? "",
           anamnesis: historia.anamnesis as Anamnesis | null,
           examen: historia.examen as Examen | null,
+          anexo: historia.anexo as Respuestas | null,
+          diagnostico: historia.diagnostico as Respuestas | null,
+          plan: historia.plan as Respuestas | null,
           creadaPor: historia.creadaPor,
           cerradaEn: historia.cerradaEn,
           cerradaPor: historia.cerradaPor,
