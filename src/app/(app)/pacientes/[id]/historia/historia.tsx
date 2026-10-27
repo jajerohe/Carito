@@ -210,6 +210,8 @@ function Respuesta({ pregunta: p, valor }: { pregunta: Bloque["preguntas"][numbe
   return <input name={p.id} defaultValue={String(valor ?? "")} className={claseTexto} />;
 }
 
+const claseDesplazable = "max-h-[calc(100dvh-25rem)] min-h-60 space-y-6 overflow-y-auto pr-3";
+
 // Cada pestaña es un formulario propio con su botón de guardar.
 // Con la historia cerrada se muestra igual, pero bloqueada y sin botón.
 function Seccion({
@@ -227,17 +229,15 @@ function Seccion({
       <input type="hidden" name="seccion" value={seccion} />
     </>
   );
+  // El contenido se desplaza dentro de la tarjeta; el botón Guardar queda siempre a la vista.
+  const desplazable = <div className={claseDesplazable}>{children}</div>;
   if (historia.cerradaEn) {
-    return (
-      <fieldset disabled className="space-y-6">
-        {children}
-      </fieldset>
-    );
+    return <fieldset disabled>{desplazable}</fieldset>;
   }
   return (
-    <Formulario accion={guardarSeccion} textoBoton="Guardar" className="space-y-6">
+    <Formulario accion={guardarSeccion} textoBoton="Guardar" className="space-y-4">
       {ocultos}
-      {children}
+      {desplazable}
     </Formulario>
   );
 }
@@ -288,6 +288,21 @@ export function HistoriaClinica({
               Cerrada: {fechaHora(historia.cerradaEn)} · por {historia.cerradaPor}
             </p>
           )}
+          {/* Arriba a la derecha para que el formulario tenga más alto. */}
+          {!historia.cerradaEn && (
+            <Boton
+              variante="secundario"
+              disabled={ocupado}
+              className="mt-1"
+              onClick={() => {
+                const pregunta =
+                  "¿Cerrar la historia clínica? Después ya no se podrá modificar; las correcciones se harán con notas aclaratorias. Guarda antes cada pestaña.";
+                if (window.confirm(pregunta)) ejecutar(() => cerrarHistoria(historia.id));
+              }}
+            >
+              Cerrar historia
+            </Boton>
+          )}
         </div>
       )}
     </div>
@@ -332,19 +347,6 @@ export function HistoriaClinica({
             </button>
           ))}
         </nav>
-        {!historia.cerradaEn && (
-          <Boton
-            variante="secundario"
-            disabled={ocupado}
-            onClick={() => {
-              const pregunta =
-                "¿Cerrar la historia clínica? Después ya no se podrá modificar; las correcciones se harán con notas aclaratorias. Guarda antes cada pestaña.";
-              if (window.confirm(pregunta)) ejecutar(() => cerrarHistoria(historia.id));
-            }}
-          >
-            Cerrar historia
-          </Boton>
-        )}
       </div>
 
       <Aviso estado={aviso} />
