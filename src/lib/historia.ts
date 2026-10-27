@@ -143,6 +143,8 @@ export type Pregunta =
   | { tipo: "una"; id: string; etiqueta: string; opciones: string[] } // radios
   | { tipo: "varias"; id: string; etiqueta: string; opciones: string[] } // casillas
   | { tipo: "numero"; id: string; etiqueta: string; unidad: string }
+  | { tipo: "dinero"; id: string; etiqueta: string } // pesos, sin decimales
+  | { tipo: "fecha"; id: string; etiqueta: string }
   | { tipo: "texto"; id: string; etiqueta: string }
   | { tipo: "largo"; id: string; etiqueta: string };
 
@@ -287,9 +289,31 @@ export function leerRespuestas(datos: FormData, bloques: Bloque[]): Respuestas {
     } else if (p.tipo === "una") {
       const v = texto(datos, p.id);
       respuestas[p.id] = p.opciones.includes(v) ? v : "";
+    } else if (p.tipo === "dinero") {
+      // Acepta "1.500.000" o "1500000": se guardan solo los dígitos.
+      respuestas[p.id] = texto(datos, p.id).replace(/\D/g, "");
     } else {
       respuestas[p.id] = texto(datos, p.id);
     }
   }
   return respuestas;
+}
+
+// Valor en pesos para mostrar: "1500000" → "$ 1.500.000".
+export function pesos(valor: string | undefined) {
+  if (!valor) return "";
+  return `$ ${valor.replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
+}
+
+// Texto de una respuesta para leer o imprimir.
+export function textoRespuesta(p: Pregunta, valor: string | string[] | undefined) {
+  if (Array.isArray(valor)) return valor.join(", ");
+  if (!valor) return "";
+  if (p.tipo === "numero") return `${valor} ${p.unidad}`;
+  if (p.tipo === "dinero") return pesos(valor);
+  if (p.tipo === "fecha") {
+    const [a, m, d] = valor.split("-");
+    return d ? `${d}/${m}/${a}` : valor;
+  }
+  return valor;
 }

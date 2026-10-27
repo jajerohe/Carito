@@ -122,6 +122,8 @@ export const historiaClinica = pgTable("historia_clinica", {
   anexo: jsonb("anexo"),
   diagnostico: jsonb("diagnostico"),
   plan: jsonb("plan"),
+  presupuesto: jsonb("presupuesto"),
+  consentimiento: jsonb("consentimiento"),
   cerradaEn: timestamp("cerrada_en"),
   cerradaPor: text("cerrada_por"), // nombre de quien la cerró
   creadaPor: text("creada_por").notNull(),
@@ -145,6 +147,27 @@ export const notaAclaratoria = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [index("nota_aclaratoria_historia_idx").on(table.historiaId)],
+);
+
+// Firmas del plan/presupuesto y del consentimiento (dibujadas en pantalla, PNG).
+// Una por documento y rol; no se editan ni se borran. Con la primera firma
+// el documento queda bloqueado.
+export const firma = pgTable(
+  "firma",
+  {
+    id: serial("id").primaryKey(),
+    historiaId: integer("historia_id")
+      .notNull()
+      .references(() => historiaClinica.id),
+    documento: text("documento").notNull(), // presupuesto | consentimiento
+    rol: text("rol").notNull(), // paciente | ortodoncista
+    nombre: text("nombre").notNull(),
+    identificacion: text("identificacion"),
+    imagen: text("imagen").notNull(),
+    firmadoEn: timestamp("firmado_en").defaultNow().notNull(),
+    registradoPor: text("registrado_por").notNull(),
+  },
+  (table) => [uniqueIndex("firma_documento_rol_idx").on(table.historiaId, table.documento, table.rol)],
 );
 
 // ---------- Auditoría ----------
