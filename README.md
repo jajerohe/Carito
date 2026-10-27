@@ -11,6 +11,7 @@ Por ahora tiene:
 - **¿Olvidaste tu contraseña?**: en el login; envía por correo un enlace (vence en 1 hora) para crear una nueva. Necesita `CORREO_USUARIO` y `CORREO_CONTRASENA` (contraseña de aplicación de Gmail) en los secretos de la app.
 - **Pacientes** (grupo Operación): listado con buscador y botones redondos para crear, editar y activar/desactivar. Guarda la identificación de la historia clínica: apellidos, nombres, documento (no se repite), edad, género, teléfono fijo, celular y dirección. Los pacientes **no se eliminan** (la historia clínica se conserva por ley, Resolución 1995 de 1999).
 - **Historia clínica** (botón morado en Pacientes): pestañas *Motivo de consulta*, *Anamnesis*, *Examen estomatológico y estado periodontal*, *Anexo de ortodoncia* (análisis facial, cefalométrico, de oclusión y funcional), *Diagnóstico y objetivos*, *Plan de tratamiento*, *Presupuesto*, *Consentimiento informado* y *Evolución* (fecha, procedimiento y firmas del paciente y de la ortodoncista en cada cita; los renglones no se editan ni se borran y se pueden seguir agregando con la historia cerrada). El presupuesto y el consentimiento se **firman en pantalla** (paciente o representante y ortodoncista, con fecha y hora); con la primera firma esa parte queda bloqueada. **Descargar PDF** abre la historia completa lista para guardar como PDF o imprimir. Mientras está abierta se corrige libremente; al **cerrarla** queda bloqueada y solo se le agregan **notas aclaratorias** con autor y fecha.
+- **Citas** (grupo Operación): calendario del mes actual (con ‹ › para cambiar de mes). Clic en un día abre la ventana para programar la cita (paciente, fecha, hora, duración, motivo y notas); clic en una cita la abre para cambiarla o marcarla como confirmada, atendida, no asistió o cancelada. No deja cruzar dos citas en el mismo horario y las citas no se borran.
 - **Auditoría** (grupo Administración, solo administradores): registro de solo lectura de quién creó, editó, consultó o cerró cada historia y cuándo.
 - **Administración de usuarios** (solo administradores): listado con buscador y botones redondos para crear, editar (nombre, correo, rol y contraseña), bloquear/desbloquear y eliminar.
 
@@ -74,7 +75,7 @@ src/
 ├── proxy.ts                    Si no hay sesión, manda al login
 ├── db/
 │   ├── index.ts                Conexión a la base de datos (una por visita)
-│   └── schema.ts               Tablas (usuarios, paciente, historia_clinica, firma, evolucion, nota_aclaratoria, auditoria)
+│   └── schema.ts               Tablas (usuarios, paciente, cita, historia_clinica, firma, evolucion, nota_aclaratoria, auditoria)
 ├── lib/
 │   ├── auth.ts                 Configuración de Better Auth
 │   ├── session.ts              getSession(), requireSession() y requireAdmin()
@@ -101,6 +102,7 @@ src/
         ├── mi-cuenta/          Cambiar la propia contraseña
         ├── pacientes/          Pacientes (listado con botones redondos)
         │   └── [id]/historia/  Historia clínica del paciente
+        ├── citas/              Calendario de citas
         ├── auditoria/          Registro de auditoría
         └── usuarios/           Administración de usuarios (listado con botones redondos)
 drizzle/                        Migraciones SQL (cambios en las tablas)
