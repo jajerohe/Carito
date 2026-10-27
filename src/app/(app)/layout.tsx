@@ -21,9 +21,8 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <div className="flex flex-1 flex-col md:flex-row">
       <aside className="flex flex-col gap-4 border-b border-crema-100 bg-white p-4 md:w-60 md:border-b-0 md:border-r">
-        <div className="flex items-center gap-2 px-2">
-          <Logo tamano={44} />
-          <span className="text-lg font-bold text-marca-800">Carito</span>
+        <div className="px-2">
+          <Logo tamano={200} />
         </div>
 
         <Menu secciones={secciones} />
