@@ -6,7 +6,7 @@
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/db";
-import { firma, historiaClinica, notaAclaratoria } from "@/db/schema";
+import { evolucion, firma, historiaClinica, notaAclaratoria } from "@/db/schema";
 import { registrar } from "@/lib/auditoria";
 import { CONSENTIMIENTO, DOCUMENTOS, PRESUPUESTO, ROLES, type Documento, type Rol } from "@/lib/consentimiento";
 import type { Estado } from "@/lib/errores";
@@ -88,7 +88,10 @@ export async function guardarSeccion(_estado: Estado, datos: FormData): Promise<
       .set({ anamnesis: leerAnamnesis(datos) })
       .where(eq(historiaClinica.id, historia.id));
   } else if (seccion === "examen") {
-    await getDb().update(historiaClinica).set({ examen: leerExamen(datos) }).where(eq(historiaClinica.id, historia.id));
+    await getDb()
+      .update(historiaClinica)
+      .set({ examen: leerExamen(datos) })
+      .where(eq(historiaClinica.id, historia.id));
   } else if (
     seccion === "anexo" ||
     seccion === "diagnostico" ||
@@ -141,7 +144,9 @@ export async function agregarNota(_estado: Estado, datos: FormData): Promise<Est
   const texto = String(datos.get("texto") ?? "").trim();
   if (!texto) return { ok: false, mensaje: "Escribe la nota aclaratoria." };
 
-  await getDb().insert(notaAclaratoria).values({ historiaId: historia.id, texto, autorId: user.id, autorNombre: user.name });
+  await getDb()
+    .insert(notaAclaratoria)
+    .values({ historiaId: historia.id, texto, autorId: user.id, autorNombre: user.name });
   await registrar(user, "Agregó nota aclaratoria", historia.pacienteId);
   revalidatePath(`/pacientes/${historia.pacienteId}/historia`);
   return { ok: true, mensaje: "Nota aclaratoria agregada." };
@@ -163,7 +168,8 @@ export async function firmar(_estado: Estado, datos: FormData): Promise<Estado> 
   const imagen = String(datos.get("imagen") ?? "");
   if (!nombre) return { ok: false, mensaje: "Escribe el nombre de quien firma." };
   if (!imagen.startsWith("data:image/png;base64,")) return { ok: false, mensaje: "Dibuja la firma en el recuadro." };
-  if (imagen.length > 400_000) return { ok: false, mensaje: "La firma es demasiado grande; bórrala y fírmala de nuevo." };
+  if (imagen.length > 400_000)
+    return { ok: false, mensaje: "La firma es demasiado grande; bórrala y fírmala de nuevo." };
 
   const ya = await getDb()
     .select({ id: firma.id })
@@ -177,4 +183,39 @@ export async function firmar(_estado: Estado, datos: FormData): Promise<Estado> 
   await registrar(user, `Firmó ${DOCUMENTOS[documento]} (${ROLES[rol]})`, historia.pacienteId, nombre);
   revalidatePath(`/pacientes/${historia.pacienteId}/historia`);
   return { ok: true, mensaje: "Firma guardada." };
+}
+
+function imagenValida(imagen: string) {
+  return imagen.startsWith("data:image/png;base64,") && imagen.length <= 400_000;
+}
+
+// Un renglón de la evolución del tratamiento. Se puede agregar también con la
+// historia cerrada: es un registro nuevo con fecha y firmas, no un cambio.
+export async function agregarEvolucion(_estado: Estado, datos: FormData): Promise<Estado> {
+  const { user } = await requireSession();
+  const historia = await buscar(Number(datos.get("historiaId")));
+  if (!historia) return { ok: false, mensaje: "La historia clínica no existe." };
+
+  const fecha = String(datos.get("fecha") ?? "");
+  const procedimiento = String(datos.get("procedimiento") ?? "").trim();
+  const firmaPaciente = String(datos.get("firmaPaciente") ?? "");
+  const firmaOrtodoncista = String(datos.get("firmaOrtodoncista") ?? "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return { ok: false, mensaje: "Escribe la fecha de la cita." };
+  if (!procedimiento) return { ok: false, mensaje: "Describe el procedimiento realizado." };
+  if (!imagenValida(firmaPaciente)) return { ok: false, mensaje: "Falta la firma del paciente." };
+  if (!imagenValida(firmaOrtodoncista)) return { ok: false, mensaje: "Falta la firma de la ortodoncista." };
+
+  await getDb()
+    .insert(evolucion)
+    .values({
+      historiaId: historia.id,
+      fecha,
+      procedimiento,
+      firmaPaciente,
+      firmaOrtodoncista,
+      registradoPor: user.name,
+    });
+  await registrar(user, "Agregó evolución del tratamiento", historia.pacienteId, fecha);
+  revalidatePath(`/pacientes/${historia.pacienteId}/historia`);
+  return { ok: true, mensaje: "Evolución guardada." };
 }

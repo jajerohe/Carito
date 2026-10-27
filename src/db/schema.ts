@@ -133,6 +133,25 @@ export const historiaClinica = pgTable("historia_clinica", {
     .notNull(),
 });
 
+// Evolución del tratamiento: un renglón por cita o control, con las firmas del
+// paciente y de la ortodoncista. Solo se agregan; no se editan ni se borran.
+export const evolucion = pgTable(
+  "evolucion",
+  {
+    id: serial("id").primaryKey(),
+    historiaId: integer("historia_id")
+      .notNull()
+      .references(() => historiaClinica.id),
+    fecha: text("fecha").notNull(), // AAAA-MM-DD, la fecha de la cita
+    procedimiento: text("procedimiento").notNull(),
+    firmaPaciente: text("firma_paciente").notNull(),
+    firmaOrtodoncista: text("firma_ortodoncista").notNull(),
+    registradoPor: text("registrado_por").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("evolucion_historia_idx").on(table.historiaId)],
+);
+
 // Correcciones o aclaraciones a una historia cerrada. No se editan ni se borran.
 export const notaAclaratoria = pgTable(
   "nota_aclaratoria",
