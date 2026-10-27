@@ -9,7 +9,7 @@ Por ahora tiene:
   **Bienvenido a Carito** para crear el usuario administrador.
 - **Mi cuenta**: cada persona cambia su propia contraseña (pide la actual).
 - **¿Olvidaste tu contraseña?**: en el login; envía por correo un enlace (vence en 1 hora) para crear una nueva. Necesita `CORREO_USUARIO` y `CORREO_CONTRASENA` (contraseña de aplicación de Gmail) en los secretos de la app.
-- **Administración de usuarios** (solo administradores): crear, editar nombre y correo, cambiar rol (Administrador o Usuario), cambiar contraseña, bloquear/desbloquear y eliminar.
+- **Administración de usuarios** (solo administradores): listado con buscador y botones redondos para crear, editar (nombre, correo, rol y contraseña), bloquear/desbloquear y eliminar.
 
 ## Herramientas
 
@@ -79,6 +79,7 @@ src/
 │   └── errores.ts              Mensajes de error en español
 ├── components/
 │   ├── ui.tsx                  Botón, campo, tarjeta, insignia
+│   ├── listado.tsx             Piezas de los listados: buscador, botones redondos, ventana
 │   ├── formulario.tsx          Formulario con "Guardando…" y mensajes
 │   ├── logo.tsx                Logo de Carito
 │   └── menu.tsx                Menú lateral
@@ -91,7 +92,7 @@ src/
         ├── layout.tsx          Menú lateral + contenido
         ├── page.tsx            Inicio
         ├── mi-cuenta/          Cambiar la propia contraseña
-        └── usuarios/           Administración de usuarios
+        └── usuarios/           Administración de usuarios (listado con botones redondos)
 drizzle/                        Migraciones SQL (cambios en las tablas)
 wrangler.jsonc                  Configuración del Worker de Cloudflare
 ```
