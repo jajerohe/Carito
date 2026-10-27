@@ -1,7 +1,7 @@
 import { asc, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { getDb } from "@/db";
-import { historiaClinica, notaAclaratoria, paciente } from "@/db/schema";
+import { firma, historiaClinica, notaAclaratoria, paciente } from "@/db/schema";
 import { registrarConsulta } from "@/lib/auditoria";
 import type { Anamnesis, Examen, Respuestas } from "@/lib/historia";
 import { requireSession } from "@/lib/session";
@@ -25,6 +25,10 @@ export default async function HistoriaPage({ params }: PageProps<"/pacientes/[id
         .orderBy(asc(notaAclaratoria.createdAt))
     : [];
 
+  const firmas = historia
+    ? await db.select().from(firma).where(eq(firma.historiaId, historia.id)).orderBy(asc(firma.firmadoEn))
+    : [];
+
   if (historia) await registrarConsulta(user, id);
 
   return (
@@ -40,11 +44,14 @@ export default async function HistoriaPage({ params }: PageProps<"/pacientes/[id
           anexo: historia.anexo as Respuestas | null,
           diagnostico: historia.diagnostico as Respuestas | null,
           plan: historia.plan as Respuestas | null,
+          presupuesto: historia.presupuesto as Respuestas | null,
+          consentimiento: historia.consentimiento as Respuestas | null,
           creadaPor: historia.creadaPor,
           cerradaEn: historia.cerradaEn,
           cerradaPor: historia.cerradaPor,
         }
       }
+      firmas={firmas}
       notas={notas.map((n) => ({ id: n.id, texto: n.texto, autorNombre: n.autorNombre, createdAt: n.createdAt }))}
     />
   );

@@ -10,7 +10,7 @@ Por ahora tiene:
 - **Mi cuenta**: cada persona cambia su propia contraseña (pide la actual).
 - **¿Olvidaste tu contraseña?**: en el login; envía por correo un enlace (vence en 1 hora) para crear una nueva. Necesita `CORREO_USUARIO` y `CORREO_CONTRASENA` (contraseña de aplicación de Gmail) en los secretos de la app.
 - **Pacientes** (grupo Operación): listado con buscador y botones redondos para crear, editar y activar/desactivar. Guarda la identificación de la historia clínica: apellidos, nombres, documento (no se repite), edad, género, teléfono fijo, celular y dirección. Los pacientes **no se eliminan** (la historia clínica se conserva por ley, Resolución 1995 de 1999).
-- **Historia clínica** (botón morado en Pacientes): pestañas *Motivo de consulta*, *Anamnesis*, *Examen estomatológico y estado periodontal*, *Anexo de ortodoncia* (análisis facial, cefalométrico, de oclusión y funcional), *Diagnóstico y objetivos* y *Plan de tratamiento*. Mientras está abierta se corrige libremente; al **cerrarla** queda bloqueada y solo se le agregan **notas aclaratorias** con autor y fecha.
+- **Historia clínica** (botón morado en Pacientes): pestañas *Motivo de consulta*, *Anamnesis*, *Examen estomatológico y estado periodontal*, *Anexo de ortodoncia* (análisis facial, cefalométrico, de oclusión y funcional), *Diagnóstico y objetivos*, *Plan de tratamiento*, *Presupuesto* y *Consentimiento informado*. El presupuesto y el consentimiento se **firman en pantalla** (paciente o representante y ortodoncista, con fecha y hora); con la primera firma esa parte queda bloqueada. **Descargar PDF** abre la historia completa lista para guardar como PDF o imprimir. Mientras está abierta se corrige libremente; al **cerrarla** queda bloqueada y solo se le agregan **notas aclaratorias** con autor y fecha.
 - **Auditoría** (grupo Administración, solo administradores): registro de solo lectura de quién creó, editó, consultó o cerró cada historia y cuándo.
 - **Administración de usuarios** (solo administradores): listado con buscador y botones redondos para crear, editar (nombre, correo, rol y contraseña), bloquear/desbloquear y eliminar.
 
@@ -74,13 +74,14 @@ src/
 ├── proxy.ts                    Si no hay sesión, manda al login
 ├── db/
 │   ├── index.ts                Conexión a la base de datos (una por visita)
-│   └── schema.ts               Tablas (usuarios, paciente, historia_clinica, nota_aclaratoria, auditoria)
+│   └── schema.ts               Tablas (usuarios, paciente, historia_clinica, firma, nota_aclaratoria, auditoria)
 ├── lib/
 │   ├── auth.ts                 Configuración de Better Auth
 │   ├── session.ts              getSession(), requireSession() y requireAdmin()
 │   ├── correo.ts               Envío de correos (recuperar contraseña)
 │   ├── historia.ts             Preguntas de la anamnesis y del examen
 │   ├── auditoria.ts            registrar(): deja constancia de cada acción
+│   ├── consentimiento.ts       Presupuesto y textos del consentimiento informado
 │   └── errores.ts              Mensajes de error en español
 ├── components/
 │   ├── ui.tsx                  Botón, campo, tarjeta, insignia
@@ -93,6 +94,7 @@ src/
     ├── login/                  Pantalla de inicio de sesión
     ├── recuperar/, restablecer/ ¿Olvidaste tu contraseña?
     ├── api/auth/[...all]/      Rutas internas de Better Auth
+    ├── imprimir/historia/[id]/ Historia completa para guardar como PDF
     └── (app)/                  Páginas que requieren sesión
         ├── layout.tsx          Menú lateral + contenido
         ├── page.tsx            Inicio

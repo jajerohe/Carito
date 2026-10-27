@@ -5,10 +5,28 @@
 // escrito al cambiar de una a otra. Cerrada, todo queda de solo lectura.
 import Link from "next/link";
 import { startTransition, useState, type ReactNode } from "react";
+import { RecuadroFirma } from "@/components/firma";
 import { Formulario } from "@/components/formulario";
 import { Aviso } from "@/components/listado";
 import { Boton, Campo, Insignia, Tarjeta } from "@/components/ui";
+import {
+  ACEPTACION_PRESUPUESTO,
+  CIERRE_CONSENTIMIENTO,
+  CONSENTIMIENTO,
+  DOCUMENTOS,
+  INTRODUCCION_RIESGOS,
+  ORTODONCISTA,
+  PARRAFO_ORTOQUIRURGICO,
+  PARRAFOS_FINALES,
+  PRESUPUESTO,
+  RIESGOS,
+  ROLES,
+  autorizacion,
+  type Documento,
+  type Rol,
+} from "@/lib/consentimiento";
 import type { Estado } from "@/lib/errores";
+import { fechaHora } from "@/lib/fecha";
 import {
   ANEXO_ORTODONCIA,
   DIAGNOSTICO,
@@ -19,12 +37,13 @@ import {
   HISTORIA_PERSONAL,
   PLAN_TRATAMIENTO,
   campo,
+  pesos,
   type Anamnesis,
   type Bloque,
   type Examen,
   type Respuestas,
 } from "@/lib/historia";
-import { abrirHistoria, agregarNota, cerrarHistoria, guardarSeccion } from "./actions";
+import { abrirHistoria, agregarNota, cerrarHistoria, firmar, guardarSeccion } from "./actions";
 
 type Paciente = {
   id: number;
@@ -47,9 +66,22 @@ type Historia = {
   anexo: Respuestas | null;
   diagnostico: Respuestas | null;
   plan: Respuestas | null;
+  presupuesto: Respuestas | null;
+  consentimiento: Respuestas | null;
   creadaPor: string;
   cerradaEn: Date | null;
   cerradaPor: string | null;
+};
+
+type Firma = {
+  id: number;
+  documento: string;
+  rol: string;
+  nombre: string;
+  identificacion: string | null;
+  imagen: string;
+  firmadoEn: Date;
+  registradoPor: string;
 };
 
 type Nota = { id: number; texto: string; autorNombre: string; createdAt: Date };
@@ -61,29 +93,9 @@ const PESTANAS = [
   { id: "anexo", texto: "Anexo de ortodoncia" },
   { id: "diagnostico", texto: "Diagnóstico y objetivos" },
   { id: "plan", texto: "Plan de tratamiento" },
+  { id: "presupuesto", texto: "Presupuesto" },
+  { id: "consentimiento", texto: "Consentimiento informado" },
 ] as const;
-
-// Fecha y hora de Colombia, igual en el servidor y en el navegador.
-const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
-
-// Se arma a mano con partes numéricas: el texto de toLocaleString cambia entre
-// el servidor y el navegador (espacios, "a. m.") y rompe la hidratación.
-function fechaHora(fecha: Date) {
-  const partes = Object.fromEntries(
-    new Intl.DateTimeFormat("en-US", {
-      timeZone: "America/Bogota",
-      year: "numeric",
-      month: "numeric",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hourCycle: "h23",
-    })
-      .formatToParts(new Date(fecha))
-      .map((p) => [p.type, p.value]),
-  );
-  return `${partes.day} de ${MESES[Number(partes.month) - 1]} de ${partes.year}, ${partes.hour}:${partes.minute}`;
-}
 
 const claseTexto =
   "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-marca-500 focus:ring-2 focus:ring-marca-200 disabled:bg-slate-50";
@@ -115,7 +127,13 @@ function Opciones({
     <div className="flex flex-wrap gap-x-4 gap-y-1">
       {opciones.map((o) => (
         <label key={o.valor} className="flex items-center gap-1.5 text-sm">
-          <input type="radio" name={name} value={o.valor} defaultChecked={valor === o.valor} className="accent-marca-600" />
+          <input
+            type="radio"
+            name={name}
+            value={o.valor}
+            defaultChecked={valor === o.valor}
+            className="accent-marca-600"
+          />
           {o.texto}
         </label>
       ))}
@@ -182,9 +200,17 @@ function Preguntas({ bloques, valores }: { bloques: Bloque[]; valores: Respuesta
   ));
 }
 
-function Respuesta({ pregunta: p, valor }: { pregunta: Bloque["preguntas"][number]; valor: string | string[] | undefined }) {
+function Respuesta({
+  pregunta: p,
+  valor,
+}: {
+  pregunta: Bloque["preguntas"][number];
+  valor: string | string[] | undefined;
+}) {
   if (p.tipo === "una") {
-    return <Opciones name={p.id} valor={String(valor ?? "")} opciones={p.opciones.map((o) => ({ valor: o, texto: o }))} />;
+    return (
+      <Opciones name={p.id} valor={String(valor ?? "")} opciones={p.opciones.map((o) => ({ valor: o, texto: o }))} />
+    );
   }
   if (p.tipo === "varias") {
     const marcadas = Array.isArray(valor) ? valor : [];
@@ -192,7 +218,13 @@ function Respuesta({ pregunta: p, valor }: { pregunta: Bloque["preguntas"][numbe
       <div className="flex flex-wrap gap-x-4 gap-y-1">
         {p.opciones.map((o) => (
           <label key={o} className="flex items-center gap-1.5 text-sm">
-            <input type="checkbox" name={p.id} value={o} defaultChecked={marcadas.includes(o)} className="accent-marca-600" />
+            <input
+              type="checkbox"
+              name={p.id}
+              value={o}
+              defaultChecked={marcadas.includes(o)}
+              className="accent-marca-600"
+            />
             {o}
           </label>
         ))}
@@ -202,12 +234,118 @@ function Respuesta({ pregunta: p, valor }: { pregunta: Bloque["preguntas"][numbe
   if (p.tipo === "numero") {
     return (
       <div className="flex items-center gap-2">
-        <input type="number" step="any" name={p.id} defaultValue={String(valor ?? "")} className={`${claseTexto} max-w-28`} />
+        <input
+          type="number"
+          step="any"
+          name={p.id}
+          defaultValue={String(valor ?? "")}
+          className={`${claseTexto} max-w-28`}
+        />
         <span className="text-sm text-slate-500">{p.unidad}</span>
       </div>
     );
   }
+  if (p.tipo === "dinero") {
+    return (
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-slate-500">$</span>
+        <input
+          inputMode="numeric"
+          name={p.id}
+          defaultValue={pesos(String(valor ?? "")).replace("$ ", "")}
+          className={`${claseTexto} max-w-48`}
+        />
+      </div>
+    );
+  }
+  if (p.tipo === "fecha") {
+    return <input type="date" name={p.id} defaultValue={String(valor ?? "")} className={`${claseTexto} max-w-48`} />;
+  }
   return <input name={p.id} defaultValue={String(valor ?? "")} className={claseTexto} />;
+}
+
+// Firmas de un documento: la del paciente (o su representante) y la de la ortodoncista.
+// Firmado, se muestra la imagen con nombre, fecha y hora; no se puede borrar.
+function Firmas({
+  historia,
+  documento,
+  firmas,
+  paciente,
+}: {
+  historia: Historia;
+  documento: Documento;
+  firmas: Firma[];
+  paciente: Paciente;
+}) {
+  const roles: Rol[] = ["paciente", "ortodoncista"];
+  return (
+    <div className="space-y-3 border-t border-slate-200 pt-5">
+      <Titulo>Firmas del {DOCUMENTOS[documento]}</Titulo>
+      <div className="grid gap-6 lg:grid-cols-2">
+        {roles.map((rol) => {
+          const f = firmas.find((x) => x.documento === documento && x.rol === rol);
+          if (f) {
+            return (
+              <div key={rol} className="space-y-1 rounded-lg border border-slate-200 p-3 text-sm">
+                <p className="text-xs font-medium uppercase text-slate-500">Firma del {ROLES[rol]}</p>
+                {/* eslint-disable-next-line @next/next/no-img-element -- imagen en base64 */}
+                <img
+                  src={f.imagen}
+                  alt={`Firma de ${f.nombre}`}
+                  className="h-28 w-full max-w-sm object-contain object-left"
+                />
+                <p className="font-medium">{f.nombre}</p>
+                {f.identificacion && <p className="text-slate-600">C.C. {f.identificacion}</p>}
+                <p className="text-xs text-slate-500">
+                  Firmado el {fechaHora(f.firmadoEn)} · registrado por {f.registradoPor}
+                </p>
+              </div>
+            );
+          }
+          if (historia.cerradaEn) {
+            return (
+              <p key={rol} className="rounded-lg border border-dashed border-slate-300 p-3 text-sm text-slate-500">
+                Sin firma del {ROLES[rol]}.
+              </p>
+            );
+          }
+          return (
+            <div key={rol} className="rounded-lg border border-slate-200 p-3">
+              <p className="mb-3 text-xs font-medium uppercase text-slate-500">Firma del {ROLES[rol]}</p>
+              <Formulario accion={firmar} textoBoton="Guardar firma" className="space-y-3">
+                <input type="hidden" name="historiaId" value={historia.id} />
+                <input type="hidden" name="documento" value={documento} />
+                <input type="hidden" name="rol" value={rol} />
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Campo
+                    etiqueta="Nombre"
+                    name="nombre"
+                    required
+                    defaultValue={rol === "paciente" ? `${paciente.nombres} ${paciente.apellidos}` : ORTODONCISTA}
+                  />
+                  <Campo
+                    etiqueta="Identificación (C.C.)"
+                    name="identificacion"
+                    defaultValue={rol === "paciente" ? paciente.documento : ""}
+                  />
+                </div>
+                <RecuadroFirma />
+              </Formulario>
+            </div>
+          );
+        })}
+      </div>
+      {!historia.cerradaEn && firmas.filter((f) => f.documento === documento).length < roles.length && (
+        <p className="text-xs text-slate-500">
+          Guarda los cambios antes de firmar: con la primera firma esta parte queda bloqueada y ya no se modifica.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function Parrafo({ children }: { children: ReactNode }) {
+  return <p className="text-justify text-sm leading-relaxed text-slate-700">{children}</p>;
 }
 
 const claseDesplazable = "max-h-[calc(100dvh-25rem)] min-h-60 space-y-6 overflow-y-auto pr-3";
@@ -217,10 +355,12 @@ const claseDesplazable = "max-h-[calc(100dvh-25rem)] min-h-60 space-y-6 overflow
 function Seccion({
   historia,
   seccion,
+  firmada = false,
   children,
 }: {
   historia: Historia;
   seccion: string;
+  firmada?: boolean;
   children: ReactNode;
 }) {
   const ocultos = (
@@ -231,8 +371,17 @@ function Seccion({
   );
   // El contenido se desplaza dentro de la tarjeta; el botón Guardar queda siempre a la vista.
   const desplazable = <div className={claseDesplazable}>{children}</div>;
-  if (historia.cerradaEn) {
-    return <fieldset disabled>{desplazable}</fieldset>;
+  if (historia.cerradaEn || firmada) {
+    return (
+      <fieldset disabled className="space-y-3">
+        {firmada && !historia.cerradaEn && (
+          <p className="rounded-lg bg-crema-100 px-3 py-2 text-sm text-slate-700">
+            Ya fue firmado: esta parte no se puede modificar.
+          </p>
+        )}
+        {desplazable}
+      </fieldset>
+    );
   }
   return (
     <Formulario accion={guardarSeccion} textoBoton="Guardar" className="space-y-4">
@@ -245,10 +394,12 @@ function Seccion({
 export function HistoriaClinica({
   paciente,
   historia,
+  firmas,
   notas,
 }: {
   paciente: Paciente;
   historia: Historia | null;
+  firmas: Firma[];
   notas: Nota[];
 }) {
   const [pestana, setPestana] = useState<(typeof PESTANAS)[number]["id"]>("identificacion");
@@ -278,7 +429,11 @@ export function HistoriaClinica({
       {historia && (
         <div className="space-y-1 text-right text-sm">
           <p>
-            {historia.cerradaEn ? <Insignia color="gris">Cerrada</Insignia> : <Insignia color="verde">Abierta</Insignia>}
+            {historia.cerradaEn ? (
+              <Insignia color="gris">Cerrada</Insignia>
+            ) : (
+              <Insignia color="verde">Abierta</Insignia>
+            )}
           </p>
           <p className="text-slate-500">
             Apertura: {fechaHora(historia.fechaApertura)} · por {historia.creadaPor}
@@ -289,20 +444,29 @@ export function HistoriaClinica({
             </p>
           )}
           {/* Arriba a la derecha para que el formulario tenga más alto. */}
-          {!historia.cerradaEn && (
-            <Boton
-              variante="secundario"
-              disabled={ocupado}
-              className="mt-1"
-              onClick={() => {
-                const pregunta =
-                  "¿Cerrar la historia clínica? Después ya no se podrá modificar; las correcciones se harán con notas aclaratorias. Guarda antes cada pestaña.";
-                if (window.confirm(pregunta)) ejecutar(() => cerrarHistoria(historia.id));
-              }}
+          <div className="flex justify-end gap-2 pt-1">
+            <a
+              href={`/imprimir/historia/${paciente.id}`}
+              target="_blank"
+              rel="noopener"
+              className="inline-flex items-center justify-center rounded-lg border border-marca-200 bg-white px-4 py-2 text-sm font-medium text-marca-700 hover:bg-marca-50"
             >
-              Cerrar historia
-            </Boton>
-          )}
+              Descargar PDF
+            </a>
+            {!historia.cerradaEn && (
+              <Boton
+                variante="secundario"
+                disabled={ocupado}
+                onClick={() => {
+                  const pregunta =
+                    "¿Cerrar la historia clínica? Después ya no se podrá modificar; las correcciones se harán con notas aclaratorias. Guarda antes cada pestaña.";
+                  if (window.confirm(pregunta)) ejecutar(() => cerrarHistoria(historia.id));
+                }}
+              >
+                Cerrar historia
+              </Boton>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -326,6 +490,9 @@ export function HistoriaClinica({
 
   const a = historia.anamnesis;
   const e = historia.examen;
+  const c = historia.consentimiento;
+  const firmadoPresupuesto = firmas.some((f) => f.documento === "presupuesto");
+  const firmadoConsentimiento = firmas.some((f) => f.documento === "consentimiento");
 
   return (
     <div className="max-w-5xl space-y-6">
@@ -373,7 +540,12 @@ export function HistoriaClinica({
           </dl>
           <p className="text-xs text-slate-500">Estos datos se cambian desde Pacientes (botón azul).</p>
           <Titulo>Motivo de consulta</Titulo>
-          <AreaTexto etiqueta="Motivo de la consulta" name="motivoConsulta" rows={4} defaultValue={historia.motivoConsulta} />
+          <AreaTexto
+            etiqueta="Motivo de la consulta"
+            name="motivoConsulta"
+            rows={4}
+            defaultValue={historia.motivoConsulta}
+          />
         </Seccion>
       </Tarjeta>
 
@@ -437,7 +609,11 @@ export function HistoriaClinica({
             {ESTADO_PERIODONTAL.map((item) => (
               <div key={item} className="grid items-center gap-3 py-2 sm:grid-cols-[10rem_12rem_1fr]">
                 <span className="text-sm font-medium">{item}</span>
-                <Opciones name={campo("periodontal", item, "valor")} valor={e?.periodontal[item]?.valor} opciones={SI_NO} />
+                <Opciones
+                  name={campo("periodontal", item, "valor")}
+                  valor={e?.periodontal[item]?.valor}
+                  opciones={SI_NO}
+                />
                 <input
                   name={campo("periodontal", item, "obs")}
                   placeholder="Observaciones"
@@ -472,9 +648,52 @@ export function HistoriaClinica({
       </Tarjeta>
 
       <Tarjeta className={pestana === "plan" ? "" : "hidden"}>
-        <Seccion historia={historia} seccion="plan">
+        <Seccion historia={historia} seccion="plan" firmada={firmadoPresupuesto}>
           <Preguntas bloques={PLAN_TRATAMIENTO} valores={historia.plan} />
         </Seccion>
+      </Tarjeta>
+
+      <Tarjeta className={pestana === "presupuesto" ? "space-y-6" : "hidden"}>
+        <Seccion historia={historia} seccion="presupuesto" firmada={firmadoPresupuesto}>
+          <Preguntas bloques={PRESUPUESTO} valores={historia.presupuesto} />
+          <Parrafo>{ACEPTACION_PRESUPUESTO}</Parrafo>
+        </Seccion>
+        <Firmas historia={historia} documento="presupuesto" firmas={firmas} paciente={paciente} />
+      </Tarjeta>
+
+      <Tarjeta className={pestana === "consentimiento" ? "space-y-6" : "hidden"}>
+        <Seccion historia={historia} seccion="consentimiento" firmada={firmadoConsentimiento}>
+          <Preguntas bloques={CONSENTIMIENTO} valores={c} />
+          <Titulo>Texto del consentimiento</Titulo>
+          <p className="text-xs text-slate-500">
+            Así queda el documento que se firma (con lo último que se guardó arriba). La fecha y la hora de la firma
+            quedan registradas solas.
+          </p>
+          <div className="space-y-3 rounded-lg border border-slate-200 bg-crema-50 p-4">
+            <Parrafo>{autorizacion(nombre, String(c?.objetivos ?? ""))}</Parrafo>
+            <Parrafo>{INTRODUCCION_RIESGOS}</Parrafo>
+            <ol className="list-decimal space-y-2 pl-6">
+              {RIESGOS.map(([titulo, texto]) => (
+                <li key={titulo} className="text-justify text-sm leading-relaxed text-slate-700">
+                  <strong>{titulo}:</strong> {texto}
+                </li>
+              ))}
+            </ol>
+            <Parrafo>
+              <strong>Otros riesgos asociados particularmente a mi caso:</strong>{" "}
+              {String(c?.otrosRiesgos || "Ninguno.")}
+            </Parrafo>
+            {c?.noAceptaOrtoquirurgico === "Sí" && <Parrafo>{PARRAFO_ORTOQUIRURGICO}</Parrafo>}
+            {PARRAFOS_FINALES.map((t) => (
+              <Parrafo key={t.slice(0, 30)}>{t}</Parrafo>
+            ))}
+            <Parrafo>
+              <strong>Observaciones:</strong> {String(c?.observaciones || "Ninguna.")}
+            </Parrafo>
+            <Parrafo>{CIERRE_CONSENTIMIENTO}</Parrafo>
+          </div>
+        </Seccion>
+        <Firmas historia={historia} documento="consentimiento" firmas={firmas} paciente={paciente} />
       </Tarjeta>
 
       {historia.cerradaEn && (
@@ -496,7 +715,11 @@ export function HistoriaClinica({
           )}
           <Formulario accion={agregarNota} textoBoton="Agregar nota aclaratoria" limpiarAlGuardar>
             <input type="hidden" name="historiaId" value={historia.id} />
-            <AreaTexto etiqueta="Nueva nota (queda con tu nombre, fecha y hora, y no se puede borrar)" name="texto" required />
+            <AreaTexto
+              etiqueta="Nueva nota (queda con tu nombre, fecha y hora, y no se puede borrar)"
+              name="texto"
+              required
+            />
           </Formulario>
         </Tarjeta>
       )}
