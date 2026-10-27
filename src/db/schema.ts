@@ -189,6 +189,32 @@ export const firma = pgTable(
   (table) => [uniqueIndex("firma_documento_rol_idx").on(table.historiaId, table.documento, table.rol)],
 );
 
+// ---------- Citas ----------
+
+// Agenda de citas de los pacientes. No se borran: se cancelan (queda el historial).
+export const cita = pgTable(
+  "cita",
+  {
+    id: serial("id").primaryKey(),
+    pacienteId: integer("paciente_id")
+      .notNull()
+      .references(() => paciente.id),
+    fecha: text("fecha").notNull(), // AAAA-MM-DD
+    hora: text("hora").notNull(), // HH:MM (24 h, hora de Colombia)
+    duracion: integer("duracion").default(30).notNull(), // minutos
+    motivo: text("motivo"),
+    estado: text("estado").default("Programada").notNull(),
+    notas: text("notas"),
+    creadoPor: text("creado_por").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [index("cita_fecha_idx").on(table.fecha), index("cita_paciente_idx").on(table.pacienteId)],
+);
+
 // ---------- Auditoría ----------
 
 // Quién hizo qué y cuándo: consultas y cambios de pacientes e historias.

@@ -12,7 +12,10 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     { opciones: [{ href: "/", texto: "Inicio" }] },
     {
       titulo: "Operación",
-      opciones: [{ href: "/pacientes", texto: "Pacientes" }],
+      opciones: [
+        { href: "/pacientes", texto: "Pacientes" },
+        { href: "/citas", texto: "Citas" },
+      ],
     },
     {
       titulo: "Administración",
