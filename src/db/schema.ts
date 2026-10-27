@@ -119,6 +119,9 @@ export const historiaClinica = pgTable("historia_clinica", {
   motivoConsulta: text("motivo_consulta"),
   anamnesis: jsonb("anamnesis"),
   examen: jsonb("examen"),
+  anexo: jsonb("anexo"),
+  diagnostico: jsonb("diagnostico"),
+  plan: jsonb("plan"),
   cerradaEn: timestamp("cerrada_en"),
   cerradaPor: text("cerrada_por"), // nombre de quien la cerró
   creadaPor: text("creada_por").notNull(),
