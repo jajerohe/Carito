@@ -76,10 +76,10 @@ export async function solicitarRecuperacion(_estado: Estado, datos: FormData): P
       asunto: "Recupera tu contraseña de Carito",
       texto: `Hola ${cuenta.name}:\n\nPara crear una contraseña nueva abre este enlace (vence en ${VIGENCIA_MINUTOS} minutos):\n${enlace}\n\nSi no lo pediste, ignora este correo; tu contraseña no cambia.`,
       html: `<div style="font-family:Arial,sans-serif;max-width:480px">
-  <h2 style="color:#7c3aed">Carito</h2>
+  <h2 style="color:#0277b0">Carito</h2>
   <p>Hola ${cuenta.name.replace(/</g, "&lt;")}:</p>
   <p>Para crear una contraseña nueva haz clic en el botón. El enlace vence en ${VIGENCIA_MINUTOS} minutos.</p>
-  <p><a href="${enlace}" style="display:inline-block;background:#7c3aed;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none">Crear contraseña nueva</a></p>
+  <p><a href="${enlace}" style="display:inline-block;background:#0277b0;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none">Crear contraseña nueva</a></p>
   <p style="color:#64748b;font-size:13px">Si no lo pediste, ignora este correo; tu contraseña no cambia.</p>
 </div>`,
     });
