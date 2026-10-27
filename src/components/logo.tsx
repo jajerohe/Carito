@@ -6,9 +6,9 @@ export function Logo({ tamano, className = "" }: { tamano: number; className?: s
   return (
     <Image
       src="/logo-carito.webp"
-      alt="Carito - Historias clínicas de ortodoncia"
+      alt="Carito - Historias clínicas"
       width={tamano}
-      height={Math.round((tamano * 315) / 900)}
+      height={Math.round((tamano * 551) / 600)}
       unoptimized
       priority
       className={className}

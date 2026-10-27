@@ -17,7 +17,7 @@ export function MarcoAcceso({
     <main className="flex flex-1 items-center justify-center bg-gradient-to-b from-cielo-100 via-crema-50 to-crema-100 p-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <Logo tamano={300} className="mx-auto mb-3 drop-shadow-md" />
+          <Logo tamano={170} className="mx-auto mb-3 drop-shadow-md" />
           <h1 className="text-2xl font-bold text-marca-800">{titulo}</h1>
           <p className="mt-1 text-sm text-slate-500">{subtitulo}</p>
         </div>
