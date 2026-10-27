@@ -19,3 +19,14 @@ export function fechaHora(fecha: Date) {
   );
   return `${partes.day} de ${MESES[Number(partes.month) - 1]} de ${partes.year}, ${partes.hour}:${partes.minute}`;
 }
+
+// Fecha de hoy en Colombia como AAAA-MM-DD (para campos de fecha).
+export function hoyColombia(ahora: Date) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota" }).format(ahora);
+}
+
+// "2026-10-27" → "27 de octubre de 2026".
+export function fechaLarga(aaaammdd: string) {
+  const [a, m, d] = aaaammdd.split("-");
+  return `${Number(d)} de ${MESES[Number(m) - 1]} de ${a}`;
+}

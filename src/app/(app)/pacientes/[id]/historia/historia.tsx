@@ -26,7 +26,7 @@ import {
   type Rol,
 } from "@/lib/consentimiento";
 import type { Estado } from "@/lib/errores";
-import { fechaHora } from "@/lib/fecha";
+import { fechaHora, fechaLarga } from "@/lib/fecha";
 import {
   ANEXO_ORTODONCIA,
   DIAGNOSTICO,
@@ -43,7 +43,7 @@ import {
   type Examen,
   type Respuestas,
 } from "@/lib/historia";
-import { abrirHistoria, agregarNota, cerrarHistoria, firmar, guardarSeccion } from "./actions";
+import { abrirHistoria, agregarEvolucion, agregarNota, cerrarHistoria, firmar, guardarSeccion } from "./actions";
 
 type Paciente = {
   id: number;
@@ -84,6 +84,16 @@ type Firma = {
   registradoPor: string;
 };
 
+type Evolucion = {
+  id: number;
+  fecha: string;
+  procedimiento: string;
+  firmaPaciente: string;
+  firmaOrtodoncista: string;
+  registradoPor: string;
+  createdAt: Date;
+};
+
 type Nota = { id: number; texto: string; autorNombre: string; createdAt: Date };
 
 const PESTANAS = [
@@ -95,6 +105,7 @@ const PESTANAS = [
   { id: "plan", texto: "Plan de tratamiento" },
   { id: "presupuesto", texto: "Presupuesto" },
   { id: "consentimiento", texto: "Consentimiento informado" },
+  { id: "evolucion", texto: "Evolución" },
 ] as const;
 
 const claseTexto =
@@ -391,16 +402,103 @@ function Seccion({
   );
 }
 
+// Evolución del tratamiento, como la tabla del formato: fecha, procedimiento y
+// las dos firmas. Los renglones solo se agregan; no se editan ni se borran.
+function TablaEvolucion({ historia, evoluciones, hoy }: { historia: Historia; evoluciones: Evolucion[]; hoy: string }) {
+  return (
+    <div className="space-y-6">
+      <div className="space-y-3">
+        <Titulo>Nueva evolución</Titulo>
+        {/* La clave cambia al guardar, así el formulario y las firmas quedan en blanco. */}
+        <Formulario
+          key={evoluciones.length}
+          accion={agregarEvolucion}
+          textoBoton="Guardar evolución"
+          className="space-y-4"
+        >
+          <input type="hidden" name="historiaId" value={historia.id} />
+          <div className="grid gap-4 sm:grid-cols-[12rem_1fr]">
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">Fecha</span>
+              <input type="date" name="fecha" required defaultValue={hoy} className={claseTexto} />
+            </label>
+            <AreaTexto etiqueta="Procedimiento" name="procedimiento" rows={2} required />
+          </div>
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div>
+              <p className="mb-2 text-xs font-medium uppercase text-slate-500">Firma del paciente</p>
+              <RecuadroFirma name="firmaPaciente" />
+            </div>
+            <div>
+              <p className="mb-2 text-xs font-medium uppercase text-slate-500">Firma de la ortodoncista</p>
+              <RecuadroFirma name="firmaOrtodoncista" />
+            </div>
+          </div>
+        </Formulario>
+      </div>
+
+      <div className="space-y-3">
+        <Titulo>Evolución del tratamiento</Titulo>
+        {evoluciones.length === 0 ? (
+          <p className="text-sm text-slate-500">Todavía no hay evoluciones registradas.</p>
+        ) : (
+          <div className="max-h-[calc(100dvh-25rem)] min-h-60 overflow-auto border-t border-slate-300">
+            <table className="w-full text-left text-sm">
+              <thead className="sticky top-0 z-10 bg-crema-50 text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="px-3 py-2 font-medium">Fecha</th>
+                  <th className="px-3 py-2 font-medium">Procedimiento</th>
+                  <th className="px-3 py-2 font-medium">Paciente</th>
+                  <th className="px-3 py-2 font-medium">Ortodoncista</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {evoluciones.map((ev) => (
+                  <tr key={ev.id} className="align-top">
+                    <td className="whitespace-nowrap px-3 py-2 font-medium">{fechaLarga(ev.fecha)}</td>
+                    <td className="px-3 py-2">
+                      <p className="whitespace-pre-wrap">{ev.procedimiento}</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Registrado por {ev.registradoPor} · {fechaHora(ev.createdAt)}
+                      </p>
+                    </td>
+                    <td className="px-3 py-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- imagen en base64 */}
+                      <img src={ev.firmaPaciente} alt="Firma del paciente" className="h-12 w-32 object-contain" />
+                    </td>
+                    <td className="px-3 py-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- imagen en base64 */}
+                      <img
+                        src={ev.firmaOrtodoncista}
+                        alt="Firma de la ortodoncista"
+                        className="h-12 w-32 object-contain"
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function HistoriaClinica({
   paciente,
   historia,
   firmas,
+  evoluciones,
   notas,
+  hoy,
 }: {
   paciente: Paciente;
   historia: Historia | null;
   firmas: Firma[];
+  evoluciones: Evolucion[];
   notas: Nota[];
+  hoy: string;
 }) {
   const [pestana, setPestana] = useState<(typeof PESTANAS)[number]["id"]>("identificacion");
   const [aviso, setAviso] = useState<Estado>(null);
@@ -694,6 +792,10 @@ export function HistoriaClinica({
           </div>
         </Seccion>
         <Firmas historia={historia} documento="consentimiento" firmas={firmas} paciente={paciente} />
+      </Tarjeta>
+
+      <Tarjeta className={pestana === "evolucion" ? "" : "hidden"}>
+        <TablaEvolucion historia={historia} evoluciones={evoluciones} hoy={hoy} />
       </Tarjeta>
 
       {historia.cerradaEn && (

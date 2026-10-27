@@ -1,10 +1,10 @@
 "use client";
 
 // Recuadro para firmar con el dedo, el lápiz o el mouse. La firma se envía
-// como imagen PNG en un campo oculto llamado "imagen".
+// como imagen PNG en un campo oculto (por defecto, "imagen").
 import { useRef, useState } from "react";
 
-export function RecuadroFirma() {
+export function RecuadroFirma({ name = "imagen" }: { name?: string }) {
   const lienzo = useRef<HTMLCanvasElement>(null);
   const [imagen, setImagen] = useState("");
   const dibujando = useRef(false);
@@ -66,7 +66,7 @@ export function RecuadroFirma() {
           setImagen(e.currentTarget.toDataURL("image/png"));
         }}
       />
-      <input type="hidden" name="imagen" value={imagen} />
+      <input type="hidden" name={name} value={imagen} />
       <div className="flex items-center gap-3 text-xs text-slate-500">
         <span>Firme dentro del recuadro.</span>
         <button type="button" onClick={borrar} className="font-medium text-marca-600 hover:underline">

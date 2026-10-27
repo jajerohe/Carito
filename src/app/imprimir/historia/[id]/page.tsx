@@ -6,7 +6,7 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { Logo } from "@/components/logo";
 import { getDb } from "@/db";
-import { firma, historiaClinica, notaAclaratoria, paciente } from "@/db/schema";
+import { evolucion, firma, historiaClinica, notaAclaratoria, paciente } from "@/db/schema";
 import { registrar } from "@/lib/auditoria";
 import {
   ACEPTACION_PRESUPUESTO,
@@ -21,7 +21,7 @@ import {
   autorizacion,
   type Documento,
 } from "@/lib/consentimiento";
-import { fechaHora } from "@/lib/fecha";
+import { fechaHora, fechaLarga } from "@/lib/fecha";
 import {
   ANEXO_ORTODONCIA,
   DIAGNOSTICO,
@@ -127,9 +127,14 @@ export default async function ImprimirHistoria({ params }: PageProps<"/imprimir/
   const [p] = await db.select().from(paciente).where(eq(paciente.id, id));
   const [h] = await db.select().from(historiaClinica).where(eq(historiaClinica.pacienteId, id));
   if (!p || !h) notFound();
-  const [notas, firmas] = await Promise.all([
-    db.select().from(notaAclaratoria).where(eq(notaAclaratoria.historiaId, h.id)).orderBy(asc(notaAclaratoria.createdAt)),
+  const [notas, firmas, evoluciones] = await Promise.all([
+    db
+      .select()
+      .from(notaAclaratoria)
+      .where(eq(notaAclaratoria.historiaId, h.id))
+      .orderBy(asc(notaAclaratoria.createdAt)),
     db.select().from(firma).where(eq(firma.historiaId, h.id)).orderBy(asc(firma.firmadoEn)),
+    db.select().from(evolucion).where(eq(evolucion.historiaId, h.id)).orderBy(asc(evolucion.fecha), asc(evolucion.id)),
   ]);
   await registrar(user, "Descargó historia clínica (PDF)", id);
 
@@ -156,7 +161,9 @@ export default async function ImprimirHistoria({ params }: PageProps<"/imprimir/
           </p>
         </div>
         <div className="text-right text-[11px] text-slate-600">
-          <p>Apertura: {fechaHora(h.fechaApertura)} · {h.creadaPor}</p>
+          <p>
+            Apertura: {fechaHora(h.fechaApertura)} · {h.creadaPor}
+          </p>
           <p>{h.cerradaEn ? `Cerrada: ${fechaHora(h.cerradaEn)} · ${h.cerradaPor}` : "Historia abierta"}</p>
         </div>
       </header>
@@ -257,6 +264,46 @@ export default async function ImprimirHistoria({ params }: PageProps<"/imprimir/
         </P>
         <P>{CIERRE_CONSENTIMIENTO}</P>
         <Firmas documento="consentimiento" firmas={firmas} />
+      </section>
+
+      <section className="space-y-2 break-before-page">
+        <h2 className="border-b-2 border-marca-700 pb-1 text-sm font-bold uppercase text-marca-800">
+          Evolución del tratamiento
+        </h2>
+        {evoluciones.length === 0 ? (
+          <P>Sin evoluciones registradas.</P>
+        ) : (
+          <table className="w-full border-collapse text-[11.5px]">
+            <thead>
+              <tr className="border-b border-slate-400 text-left">
+                <th className="w-32 py-1 pr-2">Fecha</th>
+                <th className="py-1 pr-2">Procedimiento</th>
+                <th className="w-28 py-1">Paciente</th>
+                <th className="w-28 py-1">Ortodoncista</th>
+              </tr>
+            </thead>
+            <tbody>
+              {evoluciones.map((ev) => (
+                <tr key={ev.id} className="break-inside-avoid border-b border-slate-200 align-top">
+                  <td className="py-1 pr-2">{fechaLarga(ev.fecha)}</td>
+                  <td className="whitespace-pre-wrap py-1 pr-2">{ev.procedimiento}</td>
+                  <td className="py-1">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- imagen en base64 */}
+                    <img src={ev.firmaPaciente} alt="Firma del paciente" className="h-10 w-24 object-contain" />
+                  </td>
+                  <td className="py-1">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- imagen en base64 */}
+                    <img
+                      src={ev.firmaOrtodoncista}
+                      alt="Firma de la ortodoncista"
+                      className="h-10 w-24 object-contain"
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </section>
 
       {notas.length > 0 && (
