@@ -1,6 +1,6 @@
 // Tablas que necesita Better Auth (inicio de sesión) más los campos
 // del plugin "admin" (role, banned, banReason, banExpires, impersonatedBy).
-import { boolean, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, index, integer, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -77,4 +77,29 @@ export const verification = pgTable(
       .notNull(),
   },
   (table) => [index("verification_identifier_idx").on(table.identifier)],
+);
+
+// ---------- Pacientes ----------
+
+// Datos de identificación del paciente (sección 1 de la historia clínica).
+export const paciente = pgTable(
+  "paciente",
+  {
+    id: serial("id").primaryKey(),
+    apellidos: text("apellidos").notNull(),
+    nombres: text("nombres").notNull(),
+    documento: text("documento").notNull(),
+    edad: integer("edad"),
+    genero: text("genero"),
+    telefonoFijo: text("telefono_fijo"),
+    celular: text("celular"),
+    direccion: text("direccion"),
+    activo: boolean("activo").default(true).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [uniqueIndex("paciente_documento_idx").on(table.documento)],
 );

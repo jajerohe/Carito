@@ -9,6 +9,7 @@ Por ahora tiene:
   **Bienvenido a Carito** para crear el usuario administrador.
 - **Mi cuenta**: cada persona cambia su propia contraseña (pide la actual).
 - **¿Olvidaste tu contraseña?**: en el login; envía por correo un enlace (vence en 1 hora) para crear una nueva. Necesita `CORREO_USUARIO` y `CORREO_CONTRASENA` (contraseña de aplicación de Gmail) en los secretos de la app.
+- **Pacientes** (grupo Operación): listado con buscador y botones redondos para crear, editar, activar/desactivar y eliminar (eliminar solo administradores). Guarda la identificación de la historia clínica: apellidos, nombres, documento (no se repite), edad, género, teléfono fijo, celular y dirección.
 - **Administración de usuarios** (solo administradores): listado con buscador y botones redondos para crear, editar (nombre, correo, rol y contraseña), bloquear/desbloquear y eliminar.
 
 ## Herramientas
@@ -71,7 +72,7 @@ src/
 ├── proxy.ts                    Si no hay sesión, manda al login
 ├── db/
 │   ├── index.ts                Conexión a la base de datos (una por visita)
-│   └── schema.ts               Tablas (user, session, account, verification)
+│   └── schema.ts               Tablas (user, session, account, verification, paciente)
 ├── lib/
 │   ├── auth.ts                 Configuración de Better Auth
 │   ├── session.ts              getSession(), requireSession() y requireAdmin()
@@ -92,6 +93,7 @@ src/
         ├── layout.tsx          Menú lateral + contenido
         ├── page.tsx            Inicio
         ├── mi-cuenta/          Cambiar la propia contraseña
+        ├── pacientes/          Pacientes (listado con botones redondos)
         └── usuarios/           Administración de usuarios (listado con botones redondos)
 drizzle/                        Migraciones SQL (cambios en las tablas)
 wrangler.jsonc                  Configuración del Worker de Cloudflare
