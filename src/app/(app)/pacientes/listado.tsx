@@ -1,11 +1,13 @@
 "use client";
 
 // Listado de pacientes con buscador y los botones redondos: crear, editar,
-// activar/desactivar y eliminar (este último solo para administradores).
+// activar/desactivar y abrir la historia clínica. Los pacientes no se eliminan.
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
   Aviso,
   BarraAcciones,
+  BotonAccion,
   CabeceraListado,
   VentanaFormulario,
   claseEncabezadoFijo,
@@ -16,7 +18,7 @@ import {
 } from "@/components/listado";
 import { Campo, Insignia, Selector } from "@/components/ui";
 import { GENEROS } from "@/lib/pacientes";
-import { cambiarEstadoPaciente, eliminarPaciente, guardarPaciente } from "./actions";
+import { cambiarEstadoPaciente, guardarPaciente } from "./actions";
 
 type Paciente = {
   id: number;
@@ -31,7 +33,8 @@ type Paciente = {
   activo: boolean;
 };
 
-export function ListadoPacientes({ pacientes, puedeEliminar }: { pacientes: Paciente[]; puedeEliminar: boolean }) {
+export function ListadoPacientes({ pacientes }: { pacientes: Paciente[] }) {
+  const router = useRouter();
   const [busqueda, setBusqueda] = useState("");
   const { seleccionadaId, setSeleccionadaId, ventana, setVentana, aviso, setAviso, ocupado, ejecutar } = useListado();
 
@@ -57,17 +60,22 @@ export function ListadoPacientes({ pacientes, puedeEliminar }: { pacientes: Paci
             activa={seleccionado?.activo !== false}
             sinEditar={sinAccion}
             sinCambiarEstado={sinAccion}
-            sinEliminar={sinAccion || !puedeEliminar}
             onCrear={() => setVentana("crear")}
             onEditar={() => setVentana("editar")}
             onCambiarEstado={() => seleccionado && ejecutar(() => cambiarEstadoPaciente(seleccionado.id))}
-            onEliminar={() => {
-              if (!seleccionado) return;
-              const nombre = `${seleccionado.nombres} ${seleccionado.apellidos}`;
-              if (!window.confirm(`¿Eliminar al paciente "${nombre}"? No se puede deshacer.`)) return;
-              ejecutar(() => eliminarPaciente(seleccionado.id), () => setSeleccionadaId(null));
-            }}
-          />
+          >
+            <BotonAccion
+              titulo="Historia clínica"
+              color="bg-violet-500"
+              deshabilitado={!seleccionado}
+              onClick={() => seleccionado && router.push(`/pacientes/${seleccionado.id}/historia`)}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-6 w-6" aria-hidden="true">
+                <rect x="5" y="4" width="14" height="17" rx="2" />
+                <path strokeLinecap="round" d="M9 4V3h6v1M9 10h6M9 14h6M9 18h3" />
+              </svg>
+            </BotonAccion>
+          </BarraAcciones>
         }
       />
 
@@ -77,7 +85,7 @@ export function ListadoPacientes({ pacientes, puedeEliminar }: { pacientes: Paci
         {pacientes.length > 0 && (
           <p className="mb-3 text-xs text-slate-500">
             {pacientes.length} paciente(s) registrados. Haz clic en una fila para seleccionarla; doble clic para
-            editarla.
+            editarla. Usa el botón morado para abrir su historia clínica.
           </p>
         )}
         <div className={claseTablaDesplazable}>

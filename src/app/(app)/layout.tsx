@@ -17,7 +17,12 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     {
       titulo: "Administración",
       opciones: [
-        ...(esAdmin ? [{ href: "/usuarios", texto: "Usuarios" }] : []),
+        ...(esAdmin
+          ? [
+              { href: "/usuarios", texto: "Usuarios" },
+              { href: "/auditoria", texto: "Auditoría" },
+            ]
+          : []),
       ],
     },
   ];

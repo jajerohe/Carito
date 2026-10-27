@@ -5,7 +5,7 @@ import { requireSession } from "@/lib/session";
 import { ListadoPacientes } from "./listado";
 
 export default async function PacientesPage() {
-  const { user } = await requireSession();
+  await requireSession();
   const pacientes = await getDb()
     .select({
       id: paciente.id,
@@ -22,5 +22,5 @@ export default async function PacientesPage() {
     .from(paciente)
     .orderBy(asc(paciente.apellidos), asc(paciente.nombres));
 
-  return <ListadoPacientes pacientes={pacientes} puedeEliminar={user.role === "admin"} />;
+  return <ListadoPacientes pacientes={pacientes} />;
 }
