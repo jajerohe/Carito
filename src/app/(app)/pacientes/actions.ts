@@ -1,14 +1,16 @@
 "use server";
 
 // Acciones del módulo de pacientes. Cualquier usuario con sesión crea, edita y
-// activa/desactiva pacientes; solo los administradores los eliminan.
+// activa/desactiva pacientes. No se eliminan: la historia clínica debe conservarse
+// (Resolución 1995 de 1999), así que un paciente que ya no se atiende se desactiva.
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/db";
 import { paciente } from "@/db/schema";
 import { esDuplicado, type Estado } from "@/lib/errores";
 import { GENEROS } from "@/lib/pacientes";
-import { requireAdmin, requireSession } from "@/lib/session";
+import { registrar } from "@/lib/auditoria";
+import { requireSession } from "@/lib/session";
 
 function texto(datos: FormData, campo: string) {
   return String(datos.get(campo) ?? "").trim();
@@ -19,7 +21,7 @@ function nombreCompleto(p: { nombres: string; apellidos: string }) {
 }
 
 export async function guardarPaciente(_estado: Estado, datos: FormData): Promise<Estado> {
-  await requireSession();
+  const { user } = await requireSession();
   const id = Number(datos.get("id")) || 0; // 0 = paciente nuevo
   const apellidos = texto(datos, "apellidos");
   const nombres = texto(datos, "nombres");
@@ -44,34 +46,29 @@ export async function guardarPaciente(_estado: Estado, datos: FormData): Promise
     direccion: texto(datos, "direccion") || null,
   };
 
+  let pacienteId = id;
   try {
     if (id) await getDb().update(paciente).set(valores).where(eq(paciente.id, id));
-    else await getDb().insert(paciente).values(valores);
+    else [{ id: pacienteId }] = await getDb().insert(paciente).values(valores).returning({ id: paciente.id });
   } catch (error) {
     if (esDuplicado(error)) return { ok: false, mensaje: "Ya existe un paciente con ese documento de identidad." };
     throw error;
   }
-  revalidatePath("/pacientes");
   const nombre = nombreCompleto(valores);
+  await registrar(user, id ? "Editó paciente" : "Creó paciente", pacienteId, nombre);
+  revalidatePath("/pacientes");
   return { ok: true, mensaje: id ? `Paciente "${nombre}" actualizado.` : `Paciente "${nombre}" creado.` };
 }
 
 export async function cambiarEstadoPaciente(id: number): Promise<Estado> {
-  await requireSession();
+  const { user } = await requireSession();
   const [actual] = await getDb().select().from(paciente).where(eq(paciente.id, id));
   if (!actual) return { ok: false, mensaje: "El paciente ya no existe." };
   await getDb().update(paciente).set({ activo: !actual.activo }).where(eq(paciente.id, id));
+  await registrar(user, actual.activo ? "Desactivó paciente" : "Activó paciente", id, nombreCompleto(actual));
   revalidatePath("/pacientes");
   return {
     ok: true,
     mensaje: `Paciente "${nombreCompleto(actual)}" ${actual.activo ? "desactivado" : "activado"}.`,
   };
-}
-
-export async function eliminarPaciente(id: number): Promise<Estado> {
-  await requireAdmin();
-  const [borrado] = await getDb().delete(paciente).where(eq(paciente.id, id)).returning();
-  if (!borrado) return { ok: false, mensaje: "El paciente ya no existe." };
-  revalidatePath("/pacientes");
-  return { ok: true, mensaje: `Paciente "${nombreCompleto(borrado)}" eliminado.` };
 }

@@ -9,7 +9,9 @@ Por ahora tiene:
   **Bienvenido a Carito** para crear el usuario administrador.
 - **Mi cuenta**: cada persona cambia su propia contraseña (pide la actual).
 - **¿Olvidaste tu contraseña?**: en el login; envía por correo un enlace (vence en 1 hora) para crear una nueva. Necesita `CORREO_USUARIO` y `CORREO_CONTRASENA` (contraseña de aplicación de Gmail) en los secretos de la app.
-- **Pacientes** (grupo Operación): listado con buscador y botones redondos para crear, editar, activar/desactivar y eliminar (eliminar solo administradores). Guarda la identificación de la historia clínica: apellidos, nombres, documento (no se repite), edad, género, teléfono fijo, celular y dirección.
+- **Pacientes** (grupo Operación): listado con buscador y botones redondos para crear, editar y activar/desactivar. Guarda la identificación de la historia clínica: apellidos, nombres, documento (no se repite), edad, género, teléfono fijo, celular y dirección. Los pacientes **no se eliminan** (la historia clínica se conserva por ley, Resolución 1995 de 1999).
+- **Historia clínica** (botón morado en Pacientes): pestañas *Identificación y motivo de consulta*, *Anamnesis* y *Examen estomatológico y estado periodontal*. Mientras está abierta se corrige libremente; al **cerrarla** queda bloqueada y solo se le agregan **notas aclaratorias** con autor y fecha.
+- **Auditoría** (grupo Administración, solo administradores): registro de solo lectura de quién creó, editó, consultó o cerró cada historia y cuándo.
 - **Administración de usuarios** (solo administradores): listado con buscador y botones redondos para crear, editar (nombre, correo, rol y contraseña), bloquear/desbloquear y eliminar.
 
 ## Herramientas
@@ -72,11 +74,13 @@ src/
 ├── proxy.ts                    Si no hay sesión, manda al login
 ├── db/
 │   ├── index.ts                Conexión a la base de datos (una por visita)
-│   └── schema.ts               Tablas (user, session, account, verification, paciente)
+│   └── schema.ts               Tablas (usuarios, paciente, historia_clinica, nota_aclaratoria, auditoria)
 ├── lib/
 │   ├── auth.ts                 Configuración de Better Auth
 │   ├── session.ts              getSession(), requireSession() y requireAdmin()
 │   ├── correo.ts               Envío de correos (recuperar contraseña)
+│   ├── historia.ts             Preguntas de la anamnesis y del examen
+│   ├── auditoria.ts            registrar(): deja constancia de cada acción
 │   └── errores.ts              Mensajes de error en español
 ├── components/
 │   ├── ui.tsx                  Botón, campo, tarjeta, insignia
@@ -94,6 +98,8 @@ src/
         ├── page.tsx            Inicio
         ├── mi-cuenta/          Cambiar la propia contraseña
         ├── pacientes/          Pacientes (listado con botones redondos)
+        │   └── [id]/historia/  Historia clínica del paciente
+        ├── auditoria/          Registro de auditoría
         └── usuarios/           Administración de usuarios (listado con botones redondos)
 drizzle/                        Migraciones SQL (cambios en las tablas)
 wrangler.jsonc                  Configuración del Worker de Cloudflare

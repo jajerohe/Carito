@@ -1,6 +1,6 @@
 // Tablas que necesita Better Auth (inicio de sesión) más los campos
 // del plugin "admin" (role, banned, banReason, banExpires, impersonatedBy).
-import { boolean, index, integer, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, index, integer, jsonb, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -102,4 +102,62 @@ export const paciente = pgTable(
       .notNull(),
   },
   (table) => [uniqueIndex("paciente_documento_idx").on(table.documento)],
+);
+
+// ---------- Historia clínica ----------
+
+// Una historia por paciente. Cada parte del formato se guarda como JSON
+// (casillas SI/NO, opciones y observaciones); ver src/lib/historia.ts.
+// Al cerrarla queda bloqueada: lo que se corrija va en notas aclaratorias.
+export const historiaClinica = pgTable("historia_clinica", {
+  id: serial("id").primaryKey(),
+  pacienteId: integer("paciente_id")
+    .notNull()
+    .unique()
+    .references(() => paciente.id),
+  fechaApertura: timestamp("fecha_apertura").defaultNow().notNull(),
+  motivoConsulta: text("motivo_consulta"),
+  anamnesis: jsonb("anamnesis"),
+  examen: jsonb("examen"),
+  cerradaEn: timestamp("cerrada_en"),
+  cerradaPor: text("cerrada_por"), // nombre de quien la cerró
+  creadaPor: text("creada_por").notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+});
+
+// Correcciones o aclaraciones a una historia cerrada. No se editan ni se borran.
+export const notaAclaratoria = pgTable(
+  "nota_aclaratoria",
+  {
+    id: serial("id").primaryKey(),
+    historiaId: integer("historia_id")
+      .notNull()
+      .references(() => historiaClinica.id),
+    texto: text("texto").notNull(),
+    autorId: text("autor_id").notNull(),
+    autorNombre: text("autor_nombre").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("nota_aclaratoria_historia_idx").on(table.historiaId)],
+);
+
+// ---------- Auditoría ----------
+
+// Quién hizo qué y cuándo: consultas y cambios de pacientes e historias.
+// Solo se agregan registros; nunca se modifican ni se borran.
+export const auditoria = pgTable(
+  "auditoria",
+  {
+    id: serial("id").primaryKey(),
+    fecha: timestamp("fecha").defaultNow().notNull(),
+    usuarioId: text("usuario_id").notNull(),
+    usuarioNombre: text("usuario_nombre").notNull(),
+    accion: text("accion").notNull(), // "Creó paciente", "Consultó historia"…
+    pacienteId: integer("paciente_id"),
+    detalle: text("detalle"),
+  },
+  (table) => [index("auditoria_fecha_idx").on(table.fecha), index("auditoria_paciente_idx").on(table.pacienteId)],
 );

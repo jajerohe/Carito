@@ -75,7 +75,7 @@ export function CabeceraListado({
 }
 
 // Botón redondo de la barra de acciones.
-function BotonAccion({
+export function BotonAccion({
   titulo,
   color,
   deshabilitado,
@@ -105,7 +105,8 @@ function BotonAccion({
 const icono = "h-6 w-6";
 
 // Crear (verde), editar (azul), activar/desactivar (amarillo) y eliminar (rojo).
-// Cada botón se apaga con su propio "sin…" cuando no aplica.
+// Cada botón se apaga con su propio "sin…" cuando no aplica. Sin "onEliminar"
+// no aparece el botón rojo; "children" agrega botones propios al final.
 export function BarraAcciones({
   singular,
   activa,
@@ -117,18 +118,20 @@ export function BarraAcciones({
   onCambiarEstado,
   onEliminar,
   onCargar,
+  children,
 }: {
   singular: string;
   activa: boolean;
   sinEditar: boolean;
   sinCambiarEstado: boolean;
-  sinEliminar: boolean;
+  sinEliminar?: boolean;
   onCrear: () => void;
   onEditar: () => void;
   onCambiarEstado: () => void;
-  onEliminar: () => void;
+  onEliminar?: () => void;
   // Si se pasa, aparece un quinto botón para cargar registros desde un archivo.
   onCargar?: () => void;
+  children?: ReactNode;
 }) {
   return (
     <div className="flex gap-3 rounded-xl bg-crema-100/70 px-4 py-3">
@@ -154,11 +157,13 @@ export function BarraAcciones({
           <circle cx={activa ? 16 : 8} cy="12" r="2.5" fill="currentColor" />
         </svg>
       </BotonAccion>
-      <BotonAccion titulo={`Eliminar ${singular}`} color="bg-red-500" deshabilitado={sinEliminar} onClick={onEliminar}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={icono} aria-hidden="true">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13M10 11v6m4-6v6" />
-        </svg>
-      </BotonAccion>
+      {onEliminar && (
+        <BotonAccion titulo={`Eliminar ${singular}`} color="bg-red-500" deshabilitado={sinEliminar} onClick={onEliminar}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={icono} aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13M10 11v6m4-6v6" />
+          </svg>
+        </BotonAccion>
+      )}
       {onCargar && (
         <BotonAccion titulo="Cargar archivo" color="bg-violet-500" onClick={onCargar}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={icono} aria-hidden="true">
@@ -166,6 +171,7 @@ export function BarraAcciones({
           </svg>
         </BotonAccion>
       )}
+      {children}
     </div>
   );
 }
