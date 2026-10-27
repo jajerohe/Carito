@@ -55,12 +55,12 @@ type Historia = {
 type Nota = { id: number; texto: string; autorNombre: string; createdAt: Date };
 
 const PESTANAS = [
-  { id: "identificacion", texto: "1–2. Identificación y motivo" },
-  { id: "anamnesis", texto: "3. Anamnesis" },
-  { id: "examen", texto: "4–5. Examen estomatológico y periodontal" },
-  { id: "anexo", texto: "6. Anexo de ortodoncia" },
-  { id: "diagnostico", texto: "7. Diagnóstico y objetivos" },
-  { id: "plan", texto: "8. Plan de tratamiento" },
+  { id: "identificacion", texto: "Motivo de consulta" },
+  { id: "anamnesis", texto: "Anamnesis" },
+  { id: "examen", texto: "Examen estomatológico y periodontal" },
+  { id: "anexo", texto: "Anexo de ortodoncia" },
+  { id: "diagnostico", texto: "Diagnóstico y objetivos" },
+  { id: "plan", texto: "Plan de tratamiento" },
 ] as const;
 
 // Fecha y hora de Colombia, igual en el servidor y en el navegador.
@@ -351,7 +351,7 @@ export function HistoriaClinica({
 
       <Tarjeta className={pestana === "identificacion" ? "" : "hidden"}>
         <Seccion historia={historia} seccion="motivo">
-          <Titulo>1. Identificación</Titulo>
+          <Titulo>Identificación</Titulo>
           <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-4">
             {[
               ["Apellidos", paciente.apellidos],
@@ -370,18 +370,18 @@ export function HistoriaClinica({
             ))}
           </dl>
           <p className="text-xs text-slate-500">Estos datos se cambian desde Pacientes (botón azul).</p>
-          <Titulo>2. Motivo de la consulta</Titulo>
+          <Titulo>Motivo de consulta</Titulo>
           <AreaTexto etiqueta="Motivo de la consulta" name="motivoConsulta" rows={4} defaultValue={historia.motivoConsulta} />
         </Seccion>
       </Tarjeta>
 
       <Tarjeta className={pestana === "anamnesis" ? "" : "hidden"}>
         <Seccion historia={historia} seccion="anamnesis">
-          <Titulo>A. Historia médica familiar</Titulo>
+          <Titulo>Historia médica familiar</Titulo>
           <TablaSiNo grupo="familiar" items={HISTORIA_FAMILIAR} valores={a?.familiar} />
           <Campo etiqueta="Otros" name="familiarOtros" defaultValue={a?.familiarOtros} />
 
-          <Titulo>B. Historia médica personal</Titulo>
+          <Titulo>Historia médica personal</Titulo>
           <TablaSiNo grupo="personal" items={HISTORIA_PERSONAL} valores={a?.personal} />
           <Campo etiqueta="Otros" name="personalOtros" defaultValue={a?.personalOtros} />
           <AreaTexto etiqueta="Medicamentos actuales" name="medicamentos" rows={2} defaultValue={a?.medicamentos} />
@@ -399,7 +399,7 @@ export function HistoriaClinica({
             <Campo etiqueta="Embarazo" name="embarazo" defaultValue={a?.embarazo} />
           </div>
 
-          <Titulo>C. Historia odontológica personal</Titulo>
+          <Titulo>Historia odontológica personal</Titulo>
           <TablaSiNo grupo="odontologica" items={HISTORIA_ODONTOLOGICA} valores={a?.odontologica} />
           <Campo etiqueta="Otros" name="odontologicaOtros" defaultValue={a?.odontologicaOtros} />
         </Seccion>
@@ -407,7 +407,7 @@ export function HistoriaClinica({
 
       <Tarjeta className={pestana === "examen" ? "" : "hidden"}>
         <Seccion historia={historia} seccion="examen">
-          <Titulo>4. Examen estomatológico · A. Examen intraoral</Titulo>
+          <Titulo>Examen estomatológico · Examen intraoral</Titulo>
           <div className="divide-y divide-slate-100">
             {EXAMEN_INTRAORAL.map((item) => (
               <div key={item} className="grid items-center gap-3 py-2 sm:grid-cols-[10rem_12rem_1fr]">
@@ -430,7 +430,7 @@ export function HistoriaClinica({
             ))}
           </div>
 
-          <Titulo>5. Estado periodontal</Titulo>
+          <Titulo>Estado periodontal</Titulo>
           <div className="divide-y divide-slate-100">
             {ESTADO_PERIODONTAL.map((item) => (
               <div key={item} className="grid items-center gap-3 py-2 sm:grid-cols-[10rem_12rem_1fr]">
